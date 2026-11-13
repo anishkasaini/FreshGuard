@@ -1,0 +1,202 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FreshGuard | Smart Food Monitor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<div class="layout">
+    <aside class="sidebar">
+        <a class="brand" href="/">Fresh<span>Guard.</span></a>
+        <p class="side-label">WORKSPACE</p>
+
+        <nav>
+            {% for key, label, symbol in [
+                ('dashboard','Dashboard','⌂'),
+                ('scanner','Freshness Scanner','◎'),
+                ('inventory','Food Inventory','▤'),
+                ('storage','Storage Monitor','◷'),
+                ('analytics','Analytics','▥'),
+                ('history','Scan History','↺')
+            ] %}
+            <a class="nav-link {% if page == key %}active{% endif %}"
+               href="{{ url_for('pages', page=key) }}">
+                <span>{{ symbol }}</span>{{ label }}
+            </a>
+            {% endfor %}
+        </nav>
+
+        <div class="sidebar-bottom">
+            <div class="status-dot"></div>
+            Your food, better managed.
+            <p>FreshGuard · 2026</p>
+        </div>
+    </aside>
+
+    <main class="main">
+        <header class="topbar">
+            <div>
+                <p class="eyebrow">SMART FOOD MONITORING</p>
+                <h2>
+                    {% if page == 'dashboard' %}Good food. Less waste.
+                    {% elif page == 'scanner' %}Freshness Scanner
+                    {% elif page == 'inventory' %}Your Food Inventory
+                    {% elif page == 'storage' %}Storage Monitor
+                    {% elif page == 'analytics' %}Food Insights
+                    {% else %}Scan History{% endif %}
+                </h2>
+            </div>
+            <div class="avatar">FG</div>
+        </header>
+
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            {% for message in messages %}
+              <div class="notice">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        {% if page == 'dashboard' %}
+        <section class="hero">
+            <div>
+                <p class="eyebrow light">WELCOME TO FRESHGUARD</p>
+                <h1>Make every bite<br>count.</h1>
+                <p>Understand visible fruit freshness, manage your food and make smarter storage decisions.</p>
+                <a class="button light-button" href="/scanner">Scan your food ↗</a>
+            </div>
+
+        </section>
+
+        <div class="stats-grid">
+            <div class="stat-card"><span>Total scans</span><strong>{{ stats.total_scans }}</strong><small>All-time scans</small></div>
+            <div class="stat-card"><span>Fresh results</span><strong>{{ stats.fresh }}</strong><small>Classified as fresh</small></div>
+            <div class="stat-card"><span>Rotten results</span><strong>{{ stats.rotten }}</strong><small>Classified as rotten</small></div>
+            <div class="stat-card"><span>Inventory items</span><strong>{{ stats.inventory_count }}</strong><small>Currently listed</small></div>
+        </div>
+
+        <section class="panel">
+            <div class="section-heading">
+                <div><p class="eyebrow">GET STARTED</p><h3>Your food toolkit</h3></div>
+            </div>
+            <div class="quick-grid">
+                <a href="/scanner" class="quick-card"><span>📷</span><h4>Scan freshness</h4><p>Upload a fruit image for a model prediction.</p></a>
+                <a href="/inventory" class="quick-card"><span>🥑</span><h4>Manage inventory</h4><p>Keep a list of food items at home.</p></a>
+                <a href="/storage" class="quick-card"><span>🌡️</span><h4>Check storage</h4><p>Review temperature and humidity conditions.</p></a>
+            </div>
+        </section>
+
+        {% elif page == 'scanner' %}
+        <section class="panel scanner-panel">
+            <p class="eyebrow">IMAGE CLASSIFICATION · HOG + SVM</p>
+            <h3>Is your fruit fresh?</h3>
+            <p class="muted">Upload a clear image of an apple, banana or orange.</p>
+            <form method="POST" enctype="multipart/form-data" class="upload-form">
+                <label class="upload-box">
+                    <span class="upload-icon">↑</span>
+                    <strong>Choose a fruit image</strong>
+                    <small>JPG, PNG or WEBP</small>
+                    <input type="file" name="food_image" accept="image/*" required>
+                </label>
+                <button class="button" type="submit">Analyse image →</button>
+            </form>
+
+            {% if result %}
+            <div class="result-card">
+                <img src="{{ url_for('static', filename='uploads/' + result.image) }}" alt="Uploaded fruit">
+                <div>
+                    <p class="eyebrow">MODEL PREDICTION</p>
+                    <h3>{{ result.label }}</h3>
+                    <p>{{ result.confidence }}% model confidence</p>
+                    <span class="result-pill">{{ 'Fresh classification' if result.fresh else 'Rotten classification' }}</span>
+                </div>
+            </div>
+            <p class="disclaimer">This is an image-based estimate of visible freshness, not a food-safety test. Do not use it to determine whether food is safe to eat.</p>
+            {% endif %}
+        </section>
+
+        {% elif page == 'inventory' %}
+        <section class="panel">
+            <p class="eyebrow">PANTRY MANAGEMENT</p><h3>Add food to inventory</h3>
+            <form method="POST" class="form-grid">
+                <input name="food_name" placeholder="Food name (e.g. Apples)" required>
+                <input name="quantity" placeholder="Quantity (e.g. 4 pieces)">
+                <select name="storage"><option value="">Storage location</option><option>Refrigerator</option><option>Room temperature</option><option>Freezer</option></select>
+                <button class="button" type="submit">Add item +</button>
+            </form>
+        </section>
+        <section class="panel">
+            <h3>Saved food items</h3>
+            {% for item in inventory %}
+            <div class="list-row">
+                <div><strong>{{ item.food_name }}</strong><small>{{ item.quantity or 'Quantity not specified' }} · {{ item.storage or 'Storage not specified' }}</small></div>
+                <form method="POST" action="{{ url_for('delete_item', item_id=item.id) }}"><button class="delete-button">Delete</button></form>
+            </div>
+            {% else %}<p class="muted">No food items added yet.</p>{% endfor %}
+        </section>
+
+        {% elif page == 'storage' %}
+        <section class="panel">
+            <p class="eyebrow">CONDITION ASSESSMENT</p><h3>Review your storage conditions</h3>
+            <p class="muted">Enter the conditions in which your food has been stored.</p>
+            <form method="POST" class="form-grid">
+                <label>Temperature (°C)<input name="temperature" type="number" step="0.1" required placeholder="e.g. 5"></label>
+                <label>Humidity (%)<input name="humidity" type="number" step="0.1" min="0" max="100" required placeholder="e.g. 55"></label>
+                <label>Storage duration (days)<input name="duration" type="number" step="0.1" min="0" max="365" required placeholder="e.g. 2"></label>
+                <button class="button" type="submit">Assess conditions →</button>
+            </form>
+            {% if result %}
+            <div class="assessment">
+                <p class="eyebrow">RULE-BASED ASSESSMENT</p>
+                <h3>{{ result.status }}</h3>
+                <p>{{ result.advice }}</p>
+                <small>{{ result.temperature }}°C · {{ result.humidity }}% humidity · {{ result.duration }} days</small>
+            </div>
+            <p class="disclaimer">This is a general condition indicator, not a trained ML prediction or food-safety guarantee. Suitable conditions vary by food type.</p>
+            {% endif %}
+        </section>
+
+        {% elif page == 'analytics' %}
+        <div class="stats-grid">
+            <div class="stat-card"><span>Total scans</span><strong>{{ stats.total_scans }}</strong></div>
+            <div class="stat-card"><span>Fresh</span><strong>{{ stats.fresh }}</strong></div>
+            <div class="stat-card"><span>Rotten</span><strong>{{ stats.rotten }}</strong></div>
+        </div>
+        <section class="panel">
+            <p class="eyebrow">CLASSIFICATION BREAKDOWN</p><h3>Scan results by class</h3>
+            <div class="bars">
+                {% for item in class_counts %}
+                <div class="bar-row">
+                    <span>{{ item.label.replace('_',' ').title() }}</span>
+                    <div class="bar-track"><div class="bar-fill" style="width:{{ (item.total / (stats.total_scans or 1) * 100)|round }}%"></div></div>
+                    <strong>{{ item.total }}</strong>
+                </div>
+                {% else %}<p class="muted">Run some scans to see analytics.</p>{% endfor %}
+            </div>
+        </section>
+
+        {% elif page == 'history' %}
+        <section class="panel">
+            <p class="eyebrow">YOUR ACTIVITY</p><h3>Previous image scans</h3>
+            {% for scan in history %}
+            <div class="list-row">
+                <div>
+                    <strong>{{ scan.label.replace('_',' ').title() }}</strong>
+                    <small>{{ scan.created_at }} · {{ "%.1f"|format(scan.confidence) }}% confidence</small>
+                </div>
+                <form method="POST" action="{{ url_for('delete_scan', scan_id=scan.id) }}"><button class="delete-button">Delete</button></form>
+            </div>
+            {% else %}<p class="muted">No scans yet. Start with the freshness scanner.</p>{% endfor %}
+        </section>
+        {% endif %}
+
+        <footer>Made with ♡ by Anishka <span>FreshGuard · Smart food monitoring</span></footer>
+    </main>
+</div>
+</body>
+</html>

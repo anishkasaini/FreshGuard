@@ -1,0 +1,16 @@
+{
+    "classes": [
+        "fresh_apple",
+        "fresh_banana",
+        "fresh_orange",
+        "rotten_apple",
+        "rotten_banana",
+        "rotten_orange"
+    ],
+    "image_size": [
+        96,
+        96
+    ],
+    "training_images": 1058,
+    "validation_accuracy": 0.7405660377358491
+}
